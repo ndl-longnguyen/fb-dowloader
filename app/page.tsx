@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   Download,
@@ -22,6 +22,11 @@ import {
   FileText,
   MessageSquareText,
   FileType,
+  Mic,
+  MicOff,
+  Subtitles,
+  Globe,
+  Clock,
 } from 'lucide-react';
 
 interface FBVideoMedia {
@@ -46,6 +51,11 @@ interface FBVideoResult {
   sourceUrl: string;
 }
 
+interface TranscriptItem {
+  time: string;
+  text: string;
+}
+
 export default function HomePage() {
   const [inputUrl, setInputUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -53,9 +63,102 @@ export default function HomePage() {
   const [result, setResult] = useState<FBVideoResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedText, setCopiedText] = useState(false);
+  const [copiedStt, setCopiedStt] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState<'video' | 'text'>('video');
+  const [activeTab, setActiveTab] = useState<'video' | 'text' | 'stt'>('video');
+
+  // Speech-to-Text State
+  const [isListening, setIsListening] = useState(false);
+  const [speechTranscript, setSpeechTranscript] = useState('');
+  const [sttLanguage, setSttLanguage] = useState<'vi-VN' | 'en-US'>('vi-VN');
+  const [parsedSubtitles, setParsedSubtitles] = useState<TranscriptItem[]>([]);
+  const [transcribingSub, setTranscribingSub] = useState(false);
+
+  const recognitionRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Initialize Web Speech Recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = sttLanguage;
+
+        recognition.onresult = (event: any) => {
+          let currentTranscript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            currentTranscript += event.results[i][0].transcript + ' ';
+          }
+          setSpeechTranscript(currentTranscript.trim());
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+      }
+    }
+  }, [sttLanguage]);
+
+  // Toggle Live STT
+  const toggleSpeechRecognition = () => {
+    if (!recognitionRef.current) {
+      alert('Trình duyệt của bạn không hỗ trợ Web Speech Recognition API. Hãy thử trên Chrome hoặc Edge.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.lang = sttLanguage;
+        recognitionRef.current.start();
+        setIsListening(true);
+
+        // Also play video preview if available
+        if (videoRef.current) {
+          videoRef.current.play();
+        }
+      } catch (err) {
+        console.error('Speech start error:', err);
+      }
+    }
+  };
+
+  // Handle Subtitle Transcribe Request from Server
+  const fetchParsedSubtitles = async (subUrl: string) => {
+    setTranscribingSub(true);
+    try {
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subtitleUrl: subUrl }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setParsedSubtitles(data.items || []);
+        if (data.transcript) {
+          setSpeechTranscript(data.transcript);
+        }
+      }
+    } catch (err) {
+      console.error('Fetch subtitles error:', err);
+    } finally {
+      setTranscribingSub(false);
+    }
+  };
 
   // Handle Paste from Clipboard
   const handlePaste = async () => {
@@ -91,6 +194,8 @@ export default function HomePage() {
     setResult(null);
     setShowPreview(false);
     setActiveTab('video');
+    setSpeechTranscript('');
+    setParsedSubtitles([]);
 
     try {
       const res = await fetch('/api/extract', {
@@ -106,6 +211,11 @@ export default function HomePage() {
       }
 
       setResult(json.data);
+
+      // Auto transcribe subtitles if available
+      if (json.data.subtitles && json.data.subtitles.length > 0 && json.data.subtitles[0].url) {
+        fetchParsedSubtitles(json.data.subtitles[0].url);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Đã xảy ra lỗi không xác định.');
     } finally {
@@ -127,12 +237,19 @@ export default function HomePage() {
     setTimeout(() => setCopiedText(false), 2000);
   };
 
+  // Copy speech transcript
+  const handleCopySpeechTranscript = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedStt(true);
+    setTimeout(() => setCopiedStt(false), 2000);
+  };
+
   // Download text caption as .txt file
-  const handleDownloadTxt = (text: string, title: string) => {
+  const handleDownloadTxt = (text: string, filenamePrefix: string) => {
     const element = document.createElement('a');
-    const file = new Blob([`${title}\n\n${text}`], { type: 'text/plain;charset=utf-8' });
+    const file = new Blob([text], { type: 'text/plain;charset=utf-8' });
     element.href = URL.createObjectURL(file);
-    element.download = `ndl_caption_${Date.now()}.txt`;
+    element.download = `${filenamePrefix}_${Date.now()}.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -150,32 +267,32 @@ export default function HomePage() {
 
   const faqs = [
     {
-      q: 'Tính năng trích xuất Văn bản (Text & Caption) là gì?',
-      a: 'Tính năng này cho phép bạn tự động bóc tách toàn bộ nội dung văn bản (Post Caption/Description), tiêu đề và thông tin bài viết đính kèm video Facebook mà không cần gõ lại thủ công.',
+      q: 'Tính năng Speech-to-Text (Nhận dạng giọng nói) hoạt động như thế nào?',
+      a: 'Tính năng Speech-to-Text tích hợp trực tiếp bộ nhận dạng giọng nói AI giúp chuyển âm thanh/lời thoại trong video Facebook thành văn bản (chữ viết) theo thời gian thực hoặc trích xuất phụ đề tự động.',
+    },
+    {
+      q: 'Công cụ hỗ trợ trích xuất giọng nói các ngôn ngữ nào?',
+      a: 'Hệ thống hỗ trợ nhận dạng tốt nhất đối với Tiếng Việt (vi-VN) và Tiếng Anh (en-US) cùng khả năng tự động bóc tách phụ đề đính kèm sẵn trên Facebook.',
     },
     {
       q: 'Công cụ do ai phát triển và có miễn phí không?',
-      a: 'Công cụ được nghiên cứu & phát triển bởi NDL Developer (NDL Team), hoàn toàn miễn phí 100%. Bạn có thể tải không giới hạn số lượng video và trích xuất text Facebook mà không cần tài khoản.',
+      a: 'Công cụ được nghiên cứu & phát triển bởi NDL Developer (NDL Team), hoàn toàn miễn phí 100%. Bạn có thể tải video và chuyển âm thanh thành văn bản không giới hạn.',
     },
     {
       q: 'Công cụ hỗ trợ các định dạng liên kết Facebook nào?',
-      a: 'Hỗ trợ tất cả các dạng liên kết Facebook bao gồm: Facebook Reels, Facebook Watch, Video bài viết, Video Livestream đã kết thúc và Facebook Shorts.',
-    },
-    {
-      q: 'Làm thế nào để tải video trên điện thoại iPhone / Android?',
-      a: 'Mở ứng dụng Facebook chọn Chia sẻ tại video rồi chọn Sao chép liên kết. Sau đó truy cập trang web này trên trình duyệt di động, dán đường dẫn và bấm Tải Video.',
+      a: 'Hỗ trợ tất cả liên kết Facebook bao gồm: Facebook Reels, Facebook Watch, Video bài viết, Video Livestream đã kết thúc và Facebook Shorts.',
     },
     {
       q: 'Video sau khi tải xuống sẽ được lưu ở đâu?',
-      a: 'File video MP4 sẽ tự động lưu vào thư mục Tải về (Downloads) trên máy tính hoặc ứng dụng Tệp / Bộ sưu tập trên điện thoại thông minh của bạn.',
+      a: 'File video MP4 và file văn bản .TXT sẽ tự động lưu vào thư mục Tải về (Downloads) trên máy tính hoặc điện thoại thông minh của bạn.',
     },
   ];
 
   const features = [
     {
-      icon: <Zap className="w-6 h-6 text-amber-400" />,
-      title: 'Tốc Độ Cực Nhanh',
-      desc: 'Công nghệ proxy stream đa luồng tiên tiến từ NDL Developer giúp xử lý và tải video về máy chỉ trong vài giây.',
+      icon: <Mic className="w-6 h-6 text-amber-400" />,
+      title: 'Speech-to-Text & AI Transcribe',
+      desc: 'Nhận dạng giọng nói trong video thành văn bản chữ Tiếng Việt & Tiếng Anh theo thời gian thực.',
     },
     {
       icon: <FileText className="w-6 h-6 text-amber-400" />,
@@ -183,9 +300,9 @@ export default function HomePage() {
       desc: 'Tự động bóc tách bài viết, phụ đề và nội dung chữ đính kèm video với tùy chọn tải file .txt tiện lợi.',
     },
     {
-      icon: <Video className="w-6 h-6 text-yellow-400" />,
-      title: 'Chất Lượng HD & Full HD',
-      desc: 'Tự động trích xuất các độ phân giải cao nhất (1080p, 720p HD) nguyên bản từ Facebook.',
+      icon: <Zap className="w-6 h-6 text-yellow-400" />,
+      title: 'Tốc Độ Cực Nhanh',
+      desc: 'Công nghệ proxy stream đa luồng tiên tiến từ NDL Developer giúp xử lý và tải video về máy chỉ trong vài giây.',
     },
     {
       icon: <ShieldCheck className="w-6 h-6 text-emerald-400" />,
@@ -230,7 +347,7 @@ export default function HomePage() {
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
             <Award className="w-3.5 h-3.5 text-amber-400" />
-            NDL Video &amp; Text Engine
+            NDL STT &amp; Video Engine
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -248,13 +365,13 @@ export default function HomePage() {
             Phát triển bởi NDL Developer
           </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white mb-4 leading-tight">
-            Tải Video FB &amp; Trích Xuất{' '}
+            Tải Video FB &amp; Chuyển Giọng Nói{' '}
             <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
-              Văn Bản / Text
+              Speech To Text
             </span>
           </h1>
           <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-            Công cụ 2 trong 1: Tải video Facebook HD &amp; Tự động trích xuất nội dung bài viết, caption chữ tiện lợi do <strong>NDL Developer</strong> phát triển.
+            Công cụ 3 trong 1: Tải video HD, trích xuất văn bản bài viết &amp; chuyển âm thanh giọng nói thành văn bản chữ tự động từ <strong>NDL Developer</strong>.
           </p>
         </div>
 
@@ -371,11 +488,11 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* View Switcher Tabs: Video vs Text Caption */}
-              <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-950 border border-slate-800/80 w-full sm:w-auto self-start">
+              {/* View Switcher Tabs: Video / Post Text / Speech To Text */}
+              <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-950 border border-slate-800/80 w-full sm:w-auto self-start overflow-x-auto">
                 <button
                   onClick={() => setActiveTab('video')}
-                  className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-extrabold flex items-center justify-center gap-2 transition ${
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-extrabold flex items-center justify-center gap-2 transition whitespace-nowrap ${
                     activeTab === 'video'
                       ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                       : 'text-slate-400 hover:text-white'
@@ -384,16 +501,29 @@ export default function HomePage() {
                   <Video className="w-4 h-4" />
                   Tải Video MP4 ({result.medias.length})
                 </button>
+
                 <button
                   onClick={() => setActiveTab('text')}
-                  className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-extrabold flex items-center justify-center gap-2 transition ${
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-extrabold flex items-center justify-center gap-2 transition whitespace-nowrap ${
                     activeTab === 'text'
                       ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <FileText className="w-4 h-4" />
-                  Văn Bản &amp; Caption Text
+                  Bài Viết &amp; Caption
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('stt')}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-extrabold flex items-center justify-center gap-2 transition whitespace-nowrap ${
+                    activeTab === 'stt'
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Mic className="w-4 h-4 text-slate-950" />
+                  Speech to Text (Lời Thoại)
                 </button>
               </div>
 
@@ -405,6 +535,7 @@ export default function HomePage() {
                     <div className="relative w-full aspect-video md:aspect-[4/3] rounded-xl overflow-hidden group bg-slate-950 border border-slate-800 shadow-md">
                       {showPreview && result.medias.length > 0 ? (
                         <video
+                          ref={videoRef}
                           src={result.medias[0].url}
                           controls
                           autoPlay
@@ -527,7 +658,7 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Tab 2: Text Caption & Transcript Extraction Section */}
+              {/* Tab 2: Text Caption Extraction Section */}
               {activeTab === 'text' && (
                 <div className="space-y-4 animate-in fade-in duration-300">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/80 p-4 rounded-xl border border-slate-800">
@@ -562,7 +693,7 @@ export default function HomePage() {
                       </button>
 
                       <button
-                        onClick={() => handleDownloadTxt(result.description, result.title)}
+                        onClick={() => handleDownloadTxt(result.description, 'ndl_post_caption')}
                         className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition"
                       >
                         <FileType className="w-3.5 h-3.5 text-blue-400" />
@@ -575,25 +706,148 @@ export default function HomePage() {
                   <div className="p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200 text-sm leading-relaxed whitespace-pre-wrap max-h-80 overflow-y-auto font-sans shadow-inner selection:bg-amber-500 selection:text-slate-950">
                     {result.description || 'Không tìm thấy nội dung bài viết kèm theo video.'}
                   </div>
+                </div>
+              )}
 
-                  {/* Subtitles section if detected */}
-                  {result.subtitles && result.subtitles.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-slate-800 space-y-2">
-                      <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                        Phụ đề đính kèm ({result.subtitles.length})
+              {/* Tab 3: Speech-to-Text & Subtitles Section */}
+              {activeTab === 'stt' && (
+                <div className="space-y-5 animate-in fade-in duration-300">
+                  {/* STT Controls Toolbar */}
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={toggleSpeechRecognition}
+                        className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition active:scale-95 ${
+                          isListening
+                            ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse shadow-rose-600/30'
+                            : 'bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 hover:from-amber-400 hover:to-yellow-300 shadow-amber-500/25'
+                        }`}
+                      >
+                        {isListening ? (
+                          <>
+                            <MicOff className="w-4 h-4" />
+                            Dừng Nhận Dạng (Recording...)
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-4 h-4" />
+                            Bật Nhận Dạng Giọng Nói (Speech to Text)
+                          </>
+                        )}
+                      </button>
+
+                      <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-300">
+                        <Globe className="w-3.5 h-3.5 text-amber-400" />
+                        <select
+                          value={sttLanguage}
+                          onChange={(e) => setSttLanguage(e.target.value as any)}
+                          className="bg-transparent text-white focus:outline-none cursor-pointer font-semibold text-xs"
+                        >
+                          <option value="vi-VN" className="bg-slate-900">Tiếng Việt (vi-VN)</option>
+                          <option value="en-US" className="bg-slate-900">Tiếng Anh (en-US)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCopySpeechTranscript(speechTranscript)}
+                        disabled={!speechTranscript}
+                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition"
+                      >
+                        {copiedStt ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            Đã chép!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-amber-400" />
+                            Copy Lời Thoại
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => handleDownloadTxt(speechTranscript, 'ndl_speech_transcript')}
+                        disabled={!speechTranscript}
+                        className="px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-40 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition"
+                      >
+                        <FileType className="w-3.5 h-3.5" />
+                        Tải .TXT
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Video Playback for STT alignment */}
+                  {result.medias.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex flex-col md:flex-row items-center gap-4">
+                      <div className="w-full md:w-64 aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-800">
+                        <video
+                          ref={videoRef}
+                          src={result.medias[0].url}
+                          controls
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="flex-1 space-y-2 text-xs text-slate-300">
+                        <span className="font-bold text-amber-400 block">
+                          💡 Hướng dẫn chuyển giọng nói thành văn bản:
+                        </span>
+                        <ol className="list-decimal list-inside space-y-1 text-slate-400 leading-relaxed">
+                          <li>Nhấn nút <strong>Bật Nhận Dạng Giọng Nói</strong> ở trên.</li>
+                          <li>Bấm <strong>Play Video</strong> để phát âm thanh video.</li>
+                          <li>Hệ thống AI sẽ tự động đọc âm thanh phát ra và chuyển thành lời thoại chữ tương ứng bên dưới!</li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Speech Transcript Output Box */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                        <Subtitles className="w-4 h-4 text-amber-400" />
+                        Kết Quả Lời Thoại / Speech Transcript
+                      </span>
+                      <span>{getWordCount(speechTranscript)} từ • {speechTranscript.length} ký tự</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm leading-relaxed whitespace-pre-wrap min-h-[140px] max-h-72 overflow-y-auto font-sans shadow-inner selection:bg-amber-500 selection:text-slate-950 relative">
+                      {isListening && (
+                        <div className="flex items-center gap-2 text-xs text-amber-400 font-bold mb-2 animate-pulse">
+                          <span className="w-2 h-2 rounded-full bg-rose-500" />
+                          Đang lắng nghe âm thanh video theo thời gian thực...
+                        </div>
+                      )}
+
+                      {speechTranscript || (
+                        <span className="text-slate-500 italic">
+                          Chưa có dữ liệu lời thoại. Hãy bấm &quot;Bật Nhận Dạng Giọng Nói&quot; và phát video để hệ thống ghi lại văn bản.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Timeline Parsed Subtitles list if available */}
+                  {parsedSubtitles.length > 0 && (
+                    <div className="space-y-3 pt-3 border-t border-slate-800">
+                      <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        Dòng thời gian Phụ Đề Tự Động ({parsedSubtitles.length} câu)
                       </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {result.subtitles.map((sub, sIdx) => (
-                          <a
-                            key={sIdx}
-                            href={sub.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 flex items-center gap-1.5 border border-slate-700"
+
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {parsedSubtitles.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 flex items-start gap-3 text-xs"
                           >
-                            <FileText className="w-3.5 h-3.5 text-amber-400" />
-                            Tải phụ đề ({sub.language})
-                          </a>
+                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono text-[11px]">
+                              {item.time}
+                            </span>
+                            <span className="text-slate-200 flex-1 leading-normal">{item.text}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -611,7 +865,7 @@ export default function HomePage() {
               Tính Năng Nổi Bật Tốt Nhất Từ NDL Developer
             </h2>
             <p className="text-slate-400 text-sm">
-              Trải nghiệm công cụ tải video &amp; trích xuất text tối ưu hóa tối đa tốc độ.
+              Trải nghiệm công cụ tải video, trích xuất text &amp; nhận dạng giọng nói đỉnh cao.
             </p>
           </div>
 
@@ -635,7 +889,7 @@ export default function HomePage() {
         <section className="w-full mb-16 p-8 rounded-3xl glass-card border border-slate-800">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-extrabold text-white mb-2">
-              Hướng Dẫn Tải Video &amp; Lấy Text 3 Bước
+              Hướng Dẫn Tải Video &amp; Chuyển Giọng Nói Thành Text 3 Bước
             </h2>
             <p className="text-slate-400 text-sm">Dễ dàng thao tác chỉ trong chưa đầy 30 giây</p>
           </div>
@@ -645,9 +899,9 @@ export default function HomePage() {
               <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-extrabold text-sm">
                 1
               </div>
-              <h4 className="font-bold text-white text-sm">Sao Chép Liên Kết</h4>
+              <h4 className="font-bold text-white text-sm">Dán Liên Kết Video</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Mở ứng dụng Facebook, chọn video hoặc Reels cần tải, chọn nút <strong>Chia sẻ</strong> và chọn <strong>Sao chép liên kết</strong>.
+                Mở ứng dụng Facebook, sao chép liên kết video / Reels và dán vào khung tìm kiếm.
               </p>
             </div>
 
@@ -655,9 +909,9 @@ export default function HomePage() {
               <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-extrabold text-sm">
                 2
               </div>
-              <h4 className="font-bold text-white text-sm">Trích Xuất Dữ Liệu</h4>
+              <h4 className="font-bold text-white text-sm">Chọn Tab Speech to Text</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Truy cập trang web, dán liên kết vào khung nhập và nhấn nút <strong>Trích Xuất Dữ Liệu</strong>.
+                Bấm chuyển sang tab <strong>Speech to Text</strong> và bật nhận dạng giọng nói.
               </p>
             </div>
 
@@ -665,9 +919,9 @@ export default function HomePage() {
               <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-extrabold text-sm">
                 3
               </div>
-              <h4 className="font-bold text-white text-sm">Tải Video hoặc Sao Chép Text</h4>
+              <h4 className="font-bold text-white text-sm">Lưu Lời Thoại .TXT</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Chuyển đổi giữa tab <strong>Tải Video MP4</strong> hoặc <strong>Văn Bản &amp; Caption</strong> để lưu thông tin về máy.
+                Phát âm thanh video và bấm <strong>Sao chép</strong> hoặc <strong>Tải file .TXT</strong> chứa toàn bộ lời thoại.
               </p>
             </div>
           </div>
@@ -731,7 +985,7 @@ export default function HomePage() {
           </p>
 
           <p className="text-[11px] text-slate-500 max-w-xl mx-auto leading-relaxed">
-            Phát triển &amp; Sở hữu bản quyền thương hiệu bởi <strong>NDL Developer</strong>. Trang web cung cấp giải pháp trích xuất dữ liệu video &amp; văn bản công khai từ Facebook, không lưu trữ hay lưu giữ nội dung bản quyền trên máy chủ.
+            Phát triển &amp; Sở hữu bản quyền thương hiệu bởi <strong>NDL Developer</strong>. Trang web cung cấp giải pháp trích xuất dữ liệu video, văn bản &amp; nhận dạng lời thoại âm thanh từ Facebook.
           </p>
         </div>
       </footer>
