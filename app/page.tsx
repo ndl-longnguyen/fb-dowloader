@@ -899,7 +899,7 @@ export default function HomePage() {
               <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-extrabold text-sm">
                 1
               </div>
-              <h4 className="font-bold text-white text-sm">Dán Liên Kết Video</h4>
+              <h3 className="font-bold text-white text-sm">Dán Liên Kết Video</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Mở ứng dụng Facebook, sao chép liên kết video / Reels và dán vào khung tìm kiếm.
               </p>
@@ -909,7 +909,7 @@ export default function HomePage() {
               <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-extrabold text-sm">
                 2
               </div>
-              <h4 className="font-bold text-white text-sm">Chọn Tab Speech to Text</h4>
+              <h3 className="font-bold text-white text-sm">Chọn Tab Speech to Text</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Bấm chuyển sang tab <strong>Speech to Text</strong> và bật nhận dạng giọng nói.
               </p>
@@ -919,7 +919,7 @@ export default function HomePage() {
               <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-extrabold text-sm">
                 3
               </div>
-              <h4 className="font-bold text-white text-sm">Lưu Lời Thoại .TXT</h4>
+              <h3 className="font-bold text-white text-sm">Lưu Lời Thoại .TXT</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Phát âm thanh video và bấm <strong>Sao chép</strong> hoặc <strong>Tải file .TXT</strong> chứa toàn bộ lời thoại.
               </p>
