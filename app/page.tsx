@@ -27,6 +27,7 @@ import {
   Subtitles,
   Globe,
   Clock,
+  ExternalLink,
 } from 'lucide-react';
 
 interface FBVideoMedia {
@@ -277,6 +278,10 @@ export default function HomePage() {
     {
       q: 'Công cụ do ai phát triển và có miễn phí không?',
       a: 'Công cụ được nghiên cứu & phát triển bởi NDL Developer (NDL Team), hoàn toàn miễn phí 100%. Bạn có thể tải video và chuyển âm thanh thành văn bản không giới hạn.',
+      link: {
+        text: 'Xem Profile & Dự án NDL Developer',
+        url: 'https://longnd.vercel.app/',
+      },
     },
     {
       q: 'Công cụ hỗ trợ các định dạng liên kết Facebook nào?',
@@ -322,8 +327,14 @@ export default function HomePage() {
 
       {/* Header / Navbar */}
       <header className="w-full max-w-6xl px-4 py-6 flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
-          <div className="relative w-11 h-11 rounded-2xl overflow-hidden p-0.5 bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-600 shadow-lg shadow-amber-500/20">
+        <a
+          href="https://longnd.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Xem Profile NDL Developer"
+          className="flex items-center gap-3 group cursor-pointer"
+        >
+          <div className="relative w-11 h-11 rounded-2xl overflow-hidden p-0.5 bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-600 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
             <div className="w-full h-full rounded-[14px] bg-slate-950 flex items-center justify-center overflow-hidden">
               <Image
                 src="/ndl-logo.jpg"
@@ -338,18 +349,29 @@ export default function HomePage() {
             <span className="font-black text-xl tracking-tight text-white flex items-center gap-1.5">
               NDL <span className="text-amber-400">Downloader</span>
             </span>
-            <span className="text-[10px] text-amber-400/90 font-semibold block uppercase tracking-wider">
+            <span className="text-[10px] text-amber-400/90 font-semibold flex items-center gap-1 uppercase tracking-wider group-hover:text-amber-300 transition-colors">
               Powered by NDL Developer
+              <ExternalLink className="w-2.5 h-2.5 opacity-70 group-hover:opacity-100" />
             </span>
           </div>
-        </div>
+        </a>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
             <Award className="w-3.5 h-3.5 text-amber-400" />
             NDL STT &amp; Video Engine
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+          <a
+            href="https://longnd.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Hồ sơ tác giả NDL Developer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-500/50 text-slate-200 hover:text-amber-300 text-xs font-semibold transition duration-200 shadow-sm"
+          >
+            <span>NDL Profile</span>
+            <ExternalLink className="w-3 h-3 text-amber-400" />
+          </a>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             Active
           </div>
@@ -360,10 +382,17 @@ export default function HomePage() {
       <main className="w-full max-w-4xl px-4 pt-4 pb-20 z-10 flex flex-col items-center">
         {/* Title & NDL Developer Badge */}
         <div className="text-center max-w-2xl mx-auto mb-8">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-4 backdrop-blur-md shadow-inner">
+          <a
+            href="https://longnd.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Ghé thăm Portfolio NDL Developer"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-4 backdrop-blur-md shadow-inner hover:bg-amber-500/30 hover:border-amber-400/60 transition group cursor-pointer"
+          >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             Phát triển bởi NDL Developer
-          </div>
+            <ExternalLink className="w-3 h-3 text-amber-400/80 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </a>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white mb-4 leading-tight">
             Tải Video FB &amp; Chuyển Giọng Nói{' '}
             <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
@@ -371,7 +400,16 @@ export default function HomePage() {
             </span>
           </h1>
           <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-            Công cụ 3 trong 1: Tải video HD, trích xuất văn bản bài viết &amp; chuyển âm thanh giọng nói thành văn bản chữ tự động từ <strong>NDL Developer</strong>.
+            Công cụ 3 trong 1: Tải video HD, trích xuất văn bản bài viết &amp; chuyển âm thanh giọng nói thành văn bản chữ tự động từ{' '}
+            <a
+              href="https://longnd.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-amber-300 font-bold underline underline-offset-2"
+            >
+              NDL Developer
+            </a>
+            .
           </p>
         </div>
 
@@ -952,8 +990,21 @@ export default function HomePage() {
                   />
                 </button>
                 {activeFaq === idx && (
-                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3 animate-in fade-in duration-200">
-                    {faq.a}
+                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3 animate-in fade-in duration-200 space-y-2.5">
+                    <p>{faq.a}</p>
+                    {faq.link && (
+                      <div className="pt-1">
+                        <a
+                          href={faq.link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 underline underline-offset-4 transition"
+                        >
+                          <span>{faq.link.text}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -965,7 +1016,13 @@ export default function HomePage() {
       {/* Footer & License with NDL Developer Branding */}
       <footer className="w-full border-t border-slate-800/80 py-10 px-4 text-center text-xs text-slate-400 z-10 bg-[#060911]/90 backdrop-blur-md">
         <div className="max-w-4xl mx-auto flex flex-col items-center space-y-4">
-          <div className="flex items-center gap-3">
+          <a
+            href="https://longnd.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Trang chủ NDL Developer Profile"
+            className="flex items-center gap-3 group hover:scale-105 transition-transform cursor-pointer"
+          >
             <div className="w-8 h-8 rounded-xl overflow-hidden p-0.5 bg-gradient-to-tr from-amber-500 to-yellow-400">
               <Image
                 src="/ndl-logo.jpg"
@@ -975,17 +1032,50 @@ export default function HomePage() {
                 className="w-full h-full object-cover rounded-[10px]"
               />
             </div>
-            <span className="font-extrabold text-base text-white tracking-wide">
+            <span className="font-extrabold text-base text-white tracking-wide flex items-center gap-1.5">
               NDL <span className="text-amber-400">Developer</span>
+              <ExternalLink className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </span>
+          </a>
+
+          {/* Quick Profile Links */}
+          <div className="flex flex-wrap justify-center items-center gap-3 text-xs font-medium text-slate-400 pt-1">
+            <a
+              href="https://longnd.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition"
+            >
+              <Globe className="w-3.5 h-3.5 text-amber-400" />
+              <span>Website Profile: longnd.vercel.app</span>
+              <ExternalLink className="w-3 h-3 text-amber-400/80" />
+            </a>
           </div>
 
           <p className="text-slate-300 font-medium">
-            © {new Date().getFullYear()} NDL Developer. All rights reserved. (MIT License)
+            © {new Date().getFullYear()}{' '}
+            <a
+              href="https://longnd.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:underline font-semibold"
+            >
+              NDL Developer
+            </a>
+            . All rights reserved. (MIT License)
           </p>
 
           <p className="text-[11px] text-slate-500 max-w-xl mx-auto leading-relaxed">
-            Phát triển &amp; Sở hữu bản quyền thương hiệu bởi <strong>NDL Developer</strong>. Trang web cung cấp giải pháp trích xuất dữ liệu video, văn bản &amp; nhận dạng lời thoại âm thanh từ Facebook.
+            Phát triển &amp; Sở hữu bản quyền thương hiệu bởi{' '}
+            <a
+              href="https://longnd.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-amber-300 underline underline-offset-2"
+            >
+              NDL Developer
+            </a>
+            . Trang web cung cấp giải pháp trích xuất dữ liệu video, văn bản &amp; nhận dạng lời thoại âm thanh từ Facebook.
           </p>
         </div>
       </footer>

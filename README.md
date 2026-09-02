@@ -2,7 +2,11 @@
 
 ![NDL Developer Logo](./public/ndl-logo.jpg)
 
-Website tải video Facebook tốc độ cao, hỗ trợ chất lượng Full HD, HD, SD được xây dựng trên nền tảng **Next.js 14+ (App Router, TypeScript, Tailwind CSS)** bởi **NDL Developer**.
+Website tải video Facebook tốc độ cao, hỗ trợ chất lượng Full HD, HD, SD được xây dựng trên nền tảng **Next.js 14+ (App Router, TypeScript, Tailwind CSS)** bởi [NDL Developer](https://longnd.vercel.app/).
+
+## 👨‍💻 Tác giả
+- Website Portfolio / Profile: [https://longnd.vercel.app/](https://longnd.vercel.app/)
+- Brand: **NDL Developer**
 
 ## 🌟 Tính Năng Nổi Bật
 - **Hỗ trợ đa định dạng link FB**: Facebook Reels, Facebook Watch, Post chứa video, Livestream đã xong.
@@ -21,4 +25,4 @@ npm run dev
 Mở trình duyệt tại: `http://localhost:3000`
 
 ---
-Copyright (c) 2026 **NDL Developer**. All rights reserved. (MIT License)
+Copyright (c) 2026 [NDL Developer](https://longnd.vercel.app/). All rights reserved. (MIT License)

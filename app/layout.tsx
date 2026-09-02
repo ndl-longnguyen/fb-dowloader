@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     'chuyen giong noi thanh van ban',
     'speech to text facebook',
   ],
-  authors: [{ name: 'NDL Developer' }],
+  authors: [{ name: 'NDL Developer', url: 'https://longnd.vercel.app/' }],
   creator: 'NDL Developer',
   alternates: {
     canonical: '/',
@@ -87,8 +87,9 @@ const webAppSchema = {
     priceCurrency: 'VND',
   },
   author: {
-    '@type': 'Organization',
+    '@type': 'Person',
     name: 'NDL Developer',
+    url: 'https://longnd.vercel.app/',
   },
 };
 
@@ -117,7 +118,7 @@ const faqSchema = {
       name: 'Công cụ do ai phát triển và có miễn phí không?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Công cụ được nghiên cứu & phát triển bởi NDL Developer (NDL Team), hoàn toàn miễn phí 100%. Bạn có thể tải video và chuyển âm thanh thành văn bản không giới hạn.',
+        text: 'Công cụ được nghiên cứu & phát triển bởi NDL Developer (NDL Team), hoàn toàn miễn phí 100%. Bạn có thể xem thêm thông tin và các dự án tại website profile của NDL Developer: https://longnd.vercel.app/.',
       },
     },
     {
